@@ -1,0 +1,155 @@
+<!-- ================================================================ -->
+<!-- ARCHIVO: templates/nueva_facturacion.html -->
+<!-- ================================================================ -->
+{% extends "base.html" %}
+
+{% block title %}Nueva Facturación{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Nueva Facturación</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('procesar_facturacion') }}">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label for="mes_facturacion" class="form-label">Mes de Facturación</label>
+                            <input type="text" class="form-control" id="mes_facturacion" name="mes_facturacion" 
+                                   placeholder="Ej: Enero 2025" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="medidor_principal" class="form-label">Medidor Principal (m³)</label>
+                            <input type="number" step="0.01" class="form-control" id="medidor_principal" 
+                                   name="medidor_principal" placeholder="72.00" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="monto_total" class="form-label">Monto Total (S/)</label>
+                            <input type="number" step="0.01" class="form-control" id="monto_total" 
+                                   name="monto_total" placeholder="286.30" required>
+                        </div>
+                    </div>
+
+                    <h6 class="mb-3">Consumo por Departamento</h6>
+                    <div class="row">
+                        {% for departamento in departamentos %}
+                        <div class="col-md-6 mb-3">
+                            <label for="consumo_{{ departamento.id }}" class="form-label">{{ departamento.nombre }}</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" 
+                                       id="consumo_{{ departamento.id }}" name="consumo_{{ departamento.id }}" 
+                                       placeholder="0.00" min="0" required>
+                                <span class="input-group-text">m³</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <strong><i class="fas fa-info-circle"></i> Información:</strong>
+                                El sistema distribuirá automáticamente el costo total proporcionalmente según el consumo de cada departamento.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calculator"></i> Calcular Facturación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Vista Previa del Cálculo</h6>
+            </div>
+            <div class="card-body">
+                <div id="preview" class="table-responsive" style="display: none;">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Departamento</th>
+                                <th>Consumo (m³)</th>
+                                <th>Monto a Pagar (S/)</th>
+                                <th>% del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input[type="number"]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
+    
+    function updatePreview() {
+        const medidorPrincipal = parseFloat(document.getElementById('medidor_principal').value) || 0;
+        const montoTotal = parseFloat(document.getElementById('monto_total').value) || 0;
+        
+        if (medidorPrincipal > 0 && montoTotal > 0) {
+            const tbody = document.getElementById('preview-body');
+            tbody.innerHTML = '';
+            
+            // Calcular total de consumos de departamentos
+            let totalDepartamentos = 0;
+            const consumos = [];
+            
+            {% for departamento in departamentos %}
+            const consumo{{ departamento.id }} = parseFloat(document.getElementById('consumo_{{ departamento.id }}').value) || 0;
+            consumos.push({
+                nombre: '{{ departamento.nombre }}',
+                consumo: consumo{{ departamento.id }}
+            });
+            totalDepartamentos += consumo{{ departamento.id }};
+            {% endfor %}
+            
+            // Mostrar filas con el nuevo método de cálculo
+            consumos.forEach(dept => {
+                if (dept.consumo > 0) {
+                    // Calcular porcentaje basado en total de departamentos
+                    const porcentaje = (dept.consumo / totalDepartamentos) * 100;
+                    // Aplicar porcentaje al monto total
+                    const monto = (dept.consumo / totalDepartamentos) * montoTotal;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${dept.nombre}</td>
+                        <td>${dept.consumo.toFixed(2)}</td>
+                        <td>S/ ${monto.toFixed(2)}</td>
+                        <td>${porcentaje.toFixed(1)}%</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+            
+            document.getElementById('preview').style.display = 'block';
+        } else {
+            document.getElementById('preview').style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

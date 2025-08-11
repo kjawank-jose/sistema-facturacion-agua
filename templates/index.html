@@ -1,0 +1,52 @@
+<!-- ================================================================ -->
+<!-- ARCHIVO: templates/index.html -->
+<!-- ================================================================ -->
+{% extends "base.html" %}
+
+{% block title %}Inicio - Sistema de Facturación de Agua{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-white p-5 rounded">
+            <h1 class="display-4">Sistema de Facturación de Agua</h1>
+            <p class="lead">Gestión de consumo y facturación para edificios residenciales</p>
+            <hr class="my-4">
+            <p>Este sistema permite registrar el consumo de agua del medidor principal y distribuir proporcionalmente los costos entre los departamentos según su consumo individual.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Nueva Facturación</h5>
+                <p class="card-text">Registrar consumos y generar facturación mensual</p>
+                <a href="{{ url_for('nueva_facturacion') }}" class="btn btn-success">Comenzar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-history fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Historial</h5>
+                <p class="card-text">Ver registros anteriores de facturación</p>
+                <a href="{{ url_for('historial') }}" class="btn btn-info">Ver Historial</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-building fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Departamentos</h5>
+                <p class="card-text">Gestionar información de departamentos</p>
+                <a href="{{ url_for('gestionar_departamentos') }}" class="btn btn-warning">Gestionar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

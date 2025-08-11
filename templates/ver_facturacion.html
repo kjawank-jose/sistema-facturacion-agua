@@ -1,0 +1,175 @@
+<!-- ================================================================ -->
+<!-- ARCHIVO: templates/ver_facturacion.html -->
+<!-- ================================================================ -->
+{% extends "base.html" %}
+
+{% block title %}Facturación - {{ facturacion.mes_facturacion }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Facturación - {{ facturacion.mes_facturacion }}</h3>
+            <a href="{{ url_for('historial') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Historial
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información General</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Mes:</strong></td>
+                        <td>{{ facturacion.mes_facturacion }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Medidor Principal:</strong></td>
+                        <td>{{ facturacion.medidor_principal_m3|volume }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monto Total:</strong></td>
+                        <td>{{ facturacion.monto_total|currency }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Departamentos:</strong></td>
+                        <td>{{ facturacion.total_departamentos_m3|volume }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Diferencia:</strong></td>
+                        <td class="{% if facturacion.diferencia_m3 > 0 %}text-warning{% else %}text-info{% endif %}">
+                            {{ facturacion.diferencia_m3|volume }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Costo por m³:</strong></td>
+                        <td>{{ (facturacion.monto_total / facturacion.medidor_principal_m3)|currency }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Resumen de Distribución</h6>
+            </div>
+            <div class="card-body text-center">
+                <canvas id="distributionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Detalle por Departamento</h6>
+                <button onclick="window.print()" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Departamento</th>
+                                <th class="text-center">Consumo (m³)</th>
+                                <th class="text-center">Monto a Pagar</th>
+                                <th class="text-center">% del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_pagos = 0 %}
+                            {% for consumo in consumos %}
+                            <tr>
+                                <td><strong>{{ consumo.departamento_nombre }}</strong></td>
+                                <td class="text-center">{{ consumo.consumo_m3|volume }}</td>
+                                <td class="text-center">{{ consumo.monto_pagar|currency }}</td>
+                                <td class="text-center">
+                                    {{ ((consumo.consumo_m3 / facturacion.total_departamentos_m3) * 100)|round(1) }}%
+                                </td>
+                            </tr>
+                            {% set total_pagos = total_pagos + consumo.monto_pagar %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <th><strong>TOTAL</strong></th>
+                                <th class="text-center">{{ facturacion.total_departamentos_m3|volume }}</th>
+                                <th class="text-center">{{ total_pagos|currency }}</th>
+                                <th class="text-center">100.0%</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <strong><i class="fas fa-info-circle"></i> Explicación del Cálculo:</strong>
+            <ul class="mb-0 mt-2">
+                <li>El medidor principal registra {{ facturacion.medidor_principal_m3|volume }} de consumo total</li>
+                <li>Los departamentos suman {{ facturacion.total_departamentos_m3|volume }} de consumo</li>
+                <li>La diferencia de {{ facturacion.diferencia_m3|volume }} corresponde al agua utilizada para llenar el tanque</li>
+                <li>El costo se distribuye proporcionalmente según el consumo de cada departamento</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// Gráfico de distribución
+const ctx = document.getElementById('distributionChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+        labels: [
+            {% for consumo in consumos %}
+            '{{ consumo.departamento_nombre }}'{{ ',' if not loop.last }}
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for consumo in consumos %}
+                {{ consumo.monto_pagar }}{{ ',' if not loop.last }}
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': S/ ' + context.parsed.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
